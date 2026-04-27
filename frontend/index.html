@@ -1,0 +1,1377 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Onchain Notes</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0e0e10;
+      --card-bg: rgba(255,255,255,0.025);
+      --card-bg-hover: rgba(255,255,255,0.045);
+      --accent: #6366f1;
+      --accent-hover: #4f52d4;
+      --accent-subtle: rgba(99,102,241,0.12);
+      --accent-border: rgba(99,102,241,0.25);
+      --text-primary: #e8e8ed;
+      --text-secondary: #888;
+      --border: rgba(255,255,255,0.08);
+      --border-strong: rgba(255,255,255,0.14);
+      --danger: #ef4444;
+      --danger-bg: rgba(239,68,68,0.1);
+      --danger-border: rgba(239,68,68,0.2);
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --modal-bg: #16161a;
+      --sidebar-width: 272px;
+      --topbar-height: 54px;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', monospace;
+    }
+
+    [data-theme="light"] {
+      --bg: #f8f8fc;
+      --card-bg: rgba(0,0,0,0.03);
+      --card-bg-hover: rgba(0,0,0,0.06);
+      --text-primary: #1a1a2e;
+      --text-secondary: #666;
+      --border: rgba(0,0,0,0.08);
+      --border-strong: rgba(0,0,0,0.14);
+      --modal-bg: #ffffff;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      height: var(--topbar-height);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 18px;
+      flex-shrink: 0;
+      background: var(--bg);
+      z-index: 100;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: -0.4px;
+      user-select: none;
+    }
+
+    .logo-mark {
+      width: 28px;
+      height: 28px;
+      background: var(--accent);
+      border-radius: 7px;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+    }
+
+    .logo-mark svg { width: 15px; height: 15px; }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .icon-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--card-bg);
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      transition: background 0.15s, color 0.15s;
+      font-size: 15px;
+    }
+    .icon-btn:hover { background: var(--card-bg-hover); color: var(--text-primary); }
+
+    .wallet-btn {
+      height: 34px;
+      padding: 0 14px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      transition: background 0.15s, transform 0.15s;
+      font-family: inherit;
+      background: var(--accent);
+      color: #fff;
+    }
+    .wallet-btn:hover:not(:disabled) { background: var(--accent-hover); transform: translateY(-1px); }
+    .wallet-btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+    .wallet-btn.connected {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+    }
+    .wallet-btn.connected:hover { background: var(--card-bg-hover); transform: none; }
+
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); flex-shrink: 0; }
+
+    /* ── MAIN ── */
+    .main {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* ── NOT CONNECTED ── */
+    .not-connected {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      padding: 40px 20px;
+      text-align: center;
+    }
+
+    .nc-icon {
+      width: 72px;
+      height: 72px;
+      border-radius: 18px;
+      background: var(--accent-subtle);
+      border: 1px solid var(--accent-border);
+      display: grid;
+      place-items: center;
+      margin-bottom: 20px;
+    }
+
+    .nc-icon svg { width: 30px; height: 30px; color: var(--accent); }
+
+    .not-connected h2 {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+
+    .not-connected p {
+      color: var(--text-secondary);
+      font-size: 14px;
+      line-height: 1.6;
+      margin-bottom: 24px;
+      max-width: 300px;
+    }
+
+    .wallet-btn-lg {
+      height: 42px;
+      padding: 0 22px;
+      font-size: 14px;
+    }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      width: var(--sidebar-width);
+      flex-shrink: 0;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--bg);
+    }
+
+    .sidebar-head {
+      padding: 10px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .new-btn {
+      width: 100%;
+      height: 36px;
+      border-radius: 8px;
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-family: inherit;
+      transition: background 0.15s;
+    }
+    .new-btn:hover:not(:disabled) { background: var(--accent-hover); }
+    .new-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .notes-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 6px;
+    }
+
+    .notes-scroll::-webkit-scrollbar { width: 3px; }
+    .notes-scroll::-webkit-scrollbar-track { background: transparent; }
+    .notes-scroll::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 2px; }
+
+    .note-item {
+      padding: 9px 11px;
+      border-radius: 7px;
+      cursor: pointer;
+      margin-bottom: 1px;
+      border: 1px solid transparent;
+      transition: background 0.12s, border-color 0.12s;
+    }
+    .note-item:hover { background: var(--card-bg); }
+    .note-item.active {
+      background: var(--accent-subtle);
+      border-color: var(--accent-border);
+    }
+
+    .ni-title {
+      font-size: 13px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 3px;
+      color: var(--text-primary);
+    }
+    .note-item.active .ni-title { color: var(--accent); }
+
+    .ni-meta {
+      font-size: 11px;
+      color: var(--text-secondary);
+      font-family: var(--mono);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sidebar-foot {
+      padding: 8px 12px;
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--text-secondary);
+      font-family: var(--mono);
+      flex-shrink: 0;
+    }
+
+    /* Empty / loading sidebar states */
+    .sidebar-empty {
+      padding: 32px 16px;
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .sidebar-empty-icon { font-size: 28px; margin-bottom: 10px; opacity: 0.4; }
+
+    .sidebar-loading {
+      padding: 32px 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+
+    /* ── EDITOR PANE ── */
+    .editor-pane {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Empty editor */
+    .editor-empty {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 40px;
+      color: var(--text-secondary);
+    }
+
+    .editor-empty-icon { font-size: 40px; margin-bottom: 14px; opacity: 0.25; }
+
+    .editor-empty h3 {
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+
+    .editor-empty p { font-size: 13px; opacity: 0.7; line-height: 1.6; }
+
+    /* Active editor */
+    .editor-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 36px 48px 24px;
+    }
+
+    .editor-body::-webkit-scrollbar { width: 3px; }
+    .editor-body::-webkit-scrollbar-track { background: transparent; }
+    .editor-body::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 2px; }
+
+    .editor-meta-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .badge {
+      font-family: var(--mono);
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: var(--card-bg);
+      color: var(--text-secondary);
+    }
+
+    .badge.new {
+      background: var(--accent-subtle);
+      border-color: var(--accent-border);
+      color: var(--accent);
+    }
+
+    .meta-date {
+      font-size: 11px;
+      color: var(--text-secondary);
+      font-family: var(--mono);
+    }
+
+    .title-input {
+      display: block;
+      width: 100%;
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      background: none;
+      border: none;
+      outline: none;
+      color: var(--text-primary);
+      margin-bottom: 18px;
+      caret-color: var(--accent);
+      font-family: inherit;
+      line-height: 1.25;
+    }
+    .title-input::placeholder { color: rgba(136,136,136,0.35); }
+
+    .content-textarea {
+      display: block;
+      width: 100%;
+      min-height: 420px;
+      background: none;
+      border: none;
+      outline: none;
+      resize: none;
+      color: var(--text-primary);
+      font-size: 15px;
+      line-height: 1.75;
+      caret-color: var(--accent);
+      font-family: inherit;
+    }
+    .content-textarea::placeholder { color: rgba(136,136,136,0.35); }
+
+    .editor-foot {
+      flex-shrink: 0;
+      padding: 10px 48px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .save-status {
+      font-size: 11px;
+      font-family: var(--mono);
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--text-secondary);
+      opacity: 0.4;
+      flex-shrink: 0;
+    }
+    .save-status.unsaved .status-dot { background: var(--warning); opacity: 1; }
+    .save-status.saved .status-dot { background: var(--success); opacity: 1; }
+
+    .editor-actions { display: flex; gap: 7px; flex-shrink: 0; }
+
+    /* ── BUTTONS ── */
+    .btn {
+      height: 34px;
+      padding: 0 14px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: inherit;
+      transition: background 0.15s, transform 0.15s;
+      white-space: nowrap;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: var(--accent-hover); transform: translateY(-1px); }
+
+    .btn-danger {
+      background: var(--danger-bg);
+      color: var(--danger);
+      border: 1px solid var(--danger-border);
+    }
+    .btn-danger:hover:not(:disabled) { background: rgba(239,68,68,0.18); }
+
+    .btn-ghost {
+      background: var(--card-bg);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover:not(:disabled) { background: var(--card-bg-hover); color: var(--text-primary); }
+
+    /* ── SPINNER ── */
+    .spinner {
+      width: 13px;
+      height: 13px;
+      border: 2px solid transparent;
+      border-top-color: currentColor;
+      border-radius: 50%;
+      animation: spin 0.55s linear infinite;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+    .spinner-lg { width: 20px; height: 20px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── MODAL ── */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 500;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.18s;
+    }
+    .modal-backdrop.show {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .modal {
+      background: var(--modal-bg);
+      border: 1px solid var(--border-strong);
+      border-radius: 14px;
+      padding: 26px;
+      max-width: 380px;
+      width: calc(100% - 40px);
+      transform: scale(0.94) translateY(10px);
+      transition: transform 0.18s;
+    }
+    .modal-backdrop.show .modal { transform: scale(1) translateY(0); }
+
+    .modal h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+
+    .modal p {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.55;
+      margin-bottom: 22px;
+    }
+
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+    /* ── TOASTS ── */
+    .toast-wrap {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      display: flex;
+      flex-direction: column-reverse;
+      gap: 8px;
+      z-index: 600;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: var(--modal-bg);
+      border: 1px solid var(--border-strong);
+      border-radius: 11px;
+      padding: 12px 14px;
+      width: 320px;
+      display: flex;
+      align-items: flex-start;
+      gap: 11px;
+      animation: toast-in 0.25s ease;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+      pointer-events: all;
+    }
+
+    @keyframes toast-in {
+      from { transform: translateX(110%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    .toast-emoji { font-size: 17px; flex-shrink: 0; line-height: 1.3; }
+
+    .toast-inner { flex: 1; min-width: 0; }
+
+    .toast-title {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .toast-msg {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    .toast-msg a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .toast-msg a:hover { text-decoration: underline; }
+
+    .toast-close {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+      padding: 0;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .toast-close:hover { color: var(--text-primary); }
+
+    /* ── FOOTER ── */
+    .footer {
+      border-top: 1px solid var(--border);
+      padding: 8px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-shrink: 0;
+      font-size: 11px;
+      color: var(--text-secondary);
+      flex-wrap: wrap;
+    }
+
+    .footer-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .contract-addr {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      letter-spacing: 0.01em;
+    }
+
+    .footer-link {
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+    .footer-link:hover { color: var(--text-primary); }
+
+    .base-badge {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(0,82,255,0.1);
+      border: 1px solid rgba(0,82,255,0.2);
+      border-radius: 6px;
+      padding: 3px 9px;
+      color: #3d7fff;
+      font-weight: 600;
+      font-size: 11px;
+      text-decoration: none;
+    }
+
+    /* ── MOBILE ── */
+    @media (max-width: 620px) {
+      .main { flex-direction: column; }
+
+      .sidebar {
+        width: 100%;
+        max-height: 38vh;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .editor-body { padding: 20px 18px 16px; }
+      .editor-foot { padding: 10px 18px; }
+      .title-input { font-size: 22px; }
+      .topbar { padding: 0 12px; }
+
+      .footer {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+        padding: 10px 12px;
+      }
+
+      .toast-wrap { left: 12px; right: 12px; bottom: 12px; }
+      .toast { width: 100%; }
+    }
+
+    /* ── SMOOTH TRANSITIONS ── */
+    body, .topbar, .sidebar, .note-item, .editor-pane, .footer, .modal, .badge, .btn, .icon-btn, .wallet-btn {
+      transition-property: background-color, border-color, color;
+      transition-duration: 0.15s;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── TOPBAR ── -->
+  <header class="topbar">
+    <div class="logo">
+      <div class="logo-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+          <polyline points="10 9 9 9 8 9"/>
+        </svg>
+      </div>
+      Onchain Notes
+    </div>
+    <div class="topbar-actions">
+      <button class="icon-btn" id="themeBtn" title="Toggle theme" aria-label="Toggle theme">🌙</button>
+      <button class="wallet-btn" id="walletBtn">Connect Wallet</button>
+    </div>
+  </header>
+
+  <!-- ── MAIN ── -->
+  <div class="main" id="main">
+    <!-- Not connected (default) -->
+    <div class="not-connected" id="notConnected">
+      <div class="nc-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+      </div>
+      <h2>Connect your wallet</h2>
+      <p>Your notes are stored permanently on Base mainnet. Connect a wallet to read and write your notes on-chain.</p>
+      <button class="wallet-btn wallet-btn-lg" id="walletBtnCenter">Connect Wallet</button>
+    </div>
+  </div>
+
+  <!-- ── FOOTER ── -->
+  <footer class="footer">
+    <div class="footer-left">
+      <span class="contract-addr">📄 0xc9ccC404749895Cf45691897429e130E0a418200</span>
+      <a class="footer-link" href="https://basescan.org/address/0xc9ccC404749895Cf45691897429e130E0a418200" target="_blank" rel="noopener">Basescan ↗</a>
+      <a class="footer-link" href="https://github.com" target="_blank" rel="noopener">GitHub ↗</a>
+    </div>
+    <a class="base-badge" href="https://base.org" target="_blank" rel="noopener">
+      🔵 Built on Base
+    </a>
+  </footer>
+
+  <!-- ── DELETE MODAL ── -->
+  <div class="modal-backdrop" id="deleteModal">
+    <div class="modal">
+      <h3>Delete this note?</h3>
+      <p>This will permanently remove the note from the blockchain. The transaction cannot be undone.</p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="cancelDeleteBtn">Cancel</button>
+        <button class="btn btn-danger" id="confirmDeleteBtn">Delete note</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TOASTS ── -->
+  <div class="toast-wrap" id="toastWrap"></div>
+
+  <script>
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // CONFIG
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const CONTRACT_ADDRESS = '0xc9ccC404749895Cf45691897429e130E0a418200';
+  const BASE_CHAIN_ID = 8453n;
+  const BASESCAN_TX = 'https://basescan.org/tx/';
+
+  const RPC_URLS = [
+    'https://base.llamarpc.com',
+    'https://base-rpc.publicnode.com',
+    'https://mainnet.base.org',
+  ];
+
+  const ABI = [
+    {
+      inputs: [{ name: 'title', type: 'string' }, { name: 'content', type: 'string' }],
+      name: 'createNote', outputs: [], stateMutability: 'nonpayable', type: 'function',
+    },
+    {
+      inputs: [{ name: 'noteId', type: 'uint256' }, { name: 'title', type: 'string' }, { name: 'content', type: 'string' }],
+      name: 'updateNote', outputs: [], stateMutability: 'nonpayable', type: 'function',
+    },
+    {
+      inputs: [{ name: 'noteId', type: 'uint256' }],
+      name: 'deleteNote', outputs: [], stateMutability: 'nonpayable', type: 'function',
+    },
+    {
+      inputs: [],
+      name: 'getMyNotes',
+      outputs: [{
+        components: [
+          { name: 'id', type: 'uint256' },
+          { name: 'owner', type: 'address' },
+          { name: 'title', type: 'string' },
+          { name: 'content', type: 'string' },
+          { name: 'createdAt', type: 'uint256' },
+          { name: 'updatedAt', type: 'uint256' },
+        ],
+        name: '', type: 'tuple[]',
+      }],
+      stateMutability: 'view', type: 'function',
+    },
+  ];
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // STATE
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  let provider = null;
+  let signer = null;
+  let contract = null;
+  let notes = [];
+  let selectedId = null;   // BigInt | null
+  let isNew = false;
+  let unsaved = false;
+  let pendingDeleteId = null;
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // DOM REFS
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const $main       = document.getElementById('main');
+  const $walletBtn  = document.getElementById('walletBtn');
+  const $walletBtnCenter = document.getElementById('walletBtnCenter');
+  const $themeBtn   = document.getElementById('themeBtn');
+  const $deleteModal = document.getElementById('deleteModal');
+  const $cancelDel  = document.getElementById('cancelDeleteBtn');
+  const $confirmDel = document.getElementById('confirmDeleteBtn');
+  const $toastWrap  = document.getElementById('toastWrap');
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // THEME
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  (function initTheme() {
+    const saved = localStorage.getItem('theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', saved);
+    $themeBtn.textContent = saved === 'dark' ? '☀️' : '🌙';
+  })();
+
+  $themeBtn.addEventListener('click', () => {
+    const cur = document.documentElement.getAttribute('data-theme');
+    const next = cur === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+    $themeBtn.textContent = next === 'dark' ? '☀️' : '🌙';
+  });
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // WALLET
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  async function connectWallet() {
+    if (!window.ethereum) {
+      toast('error', 'MetaMask required', 'Install MetaMask to use Onchain Notes.');
+      return;
+    }
+
+    setBtnLoading($walletBtn, 'Connecting…');
+    setBtnLoading($walletBtnCenter, 'Connecting…');
+
+    try {
+      provider = new ethers.BrowserProvider(window.ethereum);
+      await provider.send('eth_requestAccounts', []);
+
+      const net = await provider.getNetwork();
+      if (net.chainId !== BASE_CHAIN_ID) {
+        await switchToBase();
+        provider = new ethers.BrowserProvider(window.ethereum);
+      }
+
+      signer = await provider.getSigner();
+      const addr = await signer.getAddress();
+      contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+
+      setWalletConnected(addr);
+      renderApp();
+      loadNotes();
+
+      window.ethereum.on('accountsChanged', onAccountsChanged);
+      window.ethereum.on('chainChanged', () => location.reload());
+
+    } catch (err) {
+      resetWalletBtn();
+      if (err.code === 4001) {
+        toast('warning', 'Cancelled', 'Wallet connection cancelled.');
+      } else {
+        toast('error', 'Connection failed', esc(err.message || 'Unknown error'));
+      }
+    }
+  }
+
+  async function switchToBase() {
+    try {
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: '0x2105' }],
+      });
+    } catch (e) {
+      if (e.code === 4902) {
+        await window.ethereum.request({
+          method: 'wallet_addEthereumChain',
+          params: [{
+            chainId: '0x2105',
+            chainName: 'Base',
+            nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+            rpcUrls: RPC_URLS,
+            blockExplorerUrls: ['https://basescan.org'],
+          }],
+        });
+      } else {
+        throw e;
+      }
+    }
+  }
+
+  function onAccountsChanged(accounts) {
+    if (accounts.length === 0) {
+      provider = signer = contract = null;
+      notes = []; selectedId = null; isNew = false;
+      resetWalletBtn();
+      showNotConnected();
+    } else {
+      location.reload();
+    }
+  }
+
+  function setWalletConnected(addr) {
+    const short = `${addr.slice(0, 6)}…${addr.slice(-4)}`;
+    $walletBtn.className = 'wallet-btn connected';
+    $walletBtn.disabled = false;
+    $walletBtn.innerHTML = `<span class="dot"></span>${short}`;
+  }
+
+  function resetWalletBtn() {
+    $walletBtn.className = 'wallet-btn';
+    $walletBtn.disabled = false;
+    $walletBtn.textContent = 'Connect Wallet';
+    $walletBtnCenter.disabled = false;
+    $walletBtnCenter.textContent = 'Connect Wallet';
+  }
+
+  $walletBtn.addEventListener('click', () => { if (!signer) connectWallet(); });
+  $walletBtnCenter.addEventListener('click', connectWallet);
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // APP SHELL
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  function showNotConnected() {
+    $main.innerHTML = '';
+    const nc = document.createElement('div');
+    nc.className = 'not-connected';
+    nc.innerHTML = `
+      <div class="nc-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+      </div>
+      <h2>Connect your wallet</h2>
+      <p>Your notes are stored permanently on Base mainnet.<br>Connect a wallet to read and write on-chain.</p>
+      <button class="wallet-btn wallet-btn-lg" id="walletBtnCenter">Connect Wallet</button>
+    `;
+    $main.appendChild(nc);
+    document.getElementById('walletBtnCenter').addEventListener('click', connectWallet);
+  }
+
+  function renderApp() {
+    $main.innerHTML = `
+      <aside class="sidebar">
+        <div class="sidebar-head">
+          <button class="new-btn" id="newNoteBtn">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            New Note
+          </button>
+        </div>
+        <div class="notes-scroll" id="notesList">
+          <div class="sidebar-loading">
+            <span class="spinner spinner-lg" style="border-top-color:var(--accent);border-color:var(--border)"></span>
+            Loading…
+          </div>
+        </div>
+        <div class="sidebar-foot" id="sidebarFoot">Base Mainnet</div>
+      </aside>
+      <div class="editor-pane" id="editorPane">
+        <div class="editor-empty">
+          <div class="editor-empty-icon">✦</div>
+          <h3>Nothing selected</h3>
+          <p>Pick a note from the sidebar<br>or create a new one.</p>
+        </div>
+      </div>
+    `;
+    document.getElementById('newNoteBtn').addEventListener('click', openNewNote);
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // NOTES LIST
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  async function loadNotes() {
+    const list = document.getElementById('notesList');
+    if (list) {
+      list.innerHTML = `
+        <div class="sidebar-loading">
+          <span class="spinner spinner-lg" style="border-top-color:var(--accent);border-color:var(--border)"></span>
+          Loading…
+        </div>
+      `;
+    }
+
+    try {
+      const raw = await contract.getMyNotes();
+      notes = raw.map(n => ({
+        id: n.id,
+        owner: n.owner,
+        title: n.title,
+        content: n.content,
+        createdAt: n.createdAt,
+        updatedAt: n.updatedAt,
+      }));
+
+      renderNotesList();
+
+      const foot = document.getElementById('sidebarFoot');
+      if (foot) foot.textContent = `${notes.length} note${notes.length !== 1 ? 's' : ''} · Base`;
+
+      // Auto-open most recent note if nothing selected
+      if (!isNew && selectedId === null && notes.length > 0) {
+        const sorted = bySortOrder(notes);
+        openNote(sorted[0].id);
+      }
+    } catch (err) {
+      if (list) {
+        list.innerHTML = `<div class="sidebar-empty"><p style="color:var(--danger)">Failed to load.<br>${esc(err.message || '')}</p></div>`;
+      }
+      toast('error', 'Load failed', esc(err.message || 'Could not fetch notes.'));
+    }
+  }
+
+  function bySortOrder(arr) {
+    return [...arr].sort((a, b) => Number(b.updatedAt) - Number(a.updatedAt));
+  }
+
+  function renderNotesList() {
+    const list = document.getElementById('notesList');
+    if (!list) return;
+
+    if (notes.length === 0) {
+      list.innerHTML = `
+        <div class="sidebar-empty">
+          <div class="sidebar-empty-icon">📝</div>
+          No notes yet.<br>Create your first one!
+        </div>
+      `;
+      return;
+    }
+
+    list.innerHTML = bySortOrder(notes).map(n => `
+      <div class="note-item ${n.id === selectedId ? 'active' : ''}"
+           data-id="${n.id}"
+           tabindex="0"
+           role="button"
+           aria-label="${esc(n.title || 'Untitled note')}"
+           onclick="openNote(${n.id}n)"
+           onkeydown="if(event.key==='Enter'||event.key===' ')openNote(${n.id}n)">
+        <div class="ni-title">${esc(n.title || 'Untitled note')}</div>
+        <div class="ni-meta">${relDate(Number(n.updatedAt))}</div>
+      </div>
+    `).join('');
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // EDITOR
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  function openNote(id) {
+    const note = notes.find(n => n.id === id);
+    if (!note) return;
+    selectedId = note.id;
+    isNew = false;
+    unsaved = false;
+    renderEditor(note);
+    renderNotesList();
+  }
+
+  function openNewNote() {
+    selectedId = null;
+    isNew = true;
+    unsaved = false;
+    renderEditor(null);
+    renderNotesList();
+  }
+
+  function renderEditor(note) {
+    const pane = document.getElementById('editorPane');
+    if (!pane) return;
+
+    const title = note ? note.title : '';
+    const content = note ? note.content : '';
+    const idLabel = note ? `#${note.id}` : 'New';
+    const isNewNote = note === null;
+
+    pane.innerHTML = `
+      <div class="editor-body" id="editorBody">
+        <div class="editor-meta-row">
+          <span class="badge ${isNewNote ? 'new' : ''}">${idLabel}</span>
+          ${note ? `<span class="meta-date">created ${fullDate(Number(note.createdAt))}</span>` : ''}
+        </div>
+        <input
+          type="text"
+          class="title-input"
+          id="titleInput"
+          value="${esc(title)}"
+          placeholder="Untitled note"
+          autocomplete="off"
+          spellcheck="true"
+        />
+        <textarea
+          class="content-textarea"
+          id="contentInput"
+          placeholder="Write something…"
+          spellcheck="true"
+        >${esc(content)}</textarea>
+      </div>
+      <div class="editor-foot">
+        <div class="save-status" id="saveStatus">
+          <span class="status-dot"></span>
+          <span id="saveLabel">All saved</span>
+        </div>
+        <div class="editor-actions">
+          ${note ? `<button class="btn btn-danger" id="deleteBtn">Delete</button>` : ''}
+          <button class="btn btn-primary" id="saveBtn">Save</button>
+        </div>
+      </div>
+    `;
+
+    const titleEl = document.getElementById('titleInput');
+    const contentEl = document.getElementById('contentInput');
+
+    titleEl.addEventListener('input', markUnsaved);
+    contentEl.addEventListener('input', markUnsaved);
+
+    if (note) {
+      document.getElementById('deleteBtn').addEventListener('click', openDeleteModal);
+    }
+
+    document.getElementById('saveBtn').addEventListener('click', saveNote);
+
+    // Ctrl+S / Cmd+S shortcut
+    pane.addEventListener('keydown', e => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        saveNote();
+      }
+    });
+
+    titleEl.focus();
+  }
+
+  function markUnsaved() {
+    unsaved = true;
+    const st = document.getElementById('saveStatus');
+    const lb = document.getElementById('saveLabel');
+    if (st) st.className = 'save-status unsaved';
+    if (lb) lb.textContent = 'Unsaved changes';
+  }
+
+  function markSaved() {
+    unsaved = false;
+    const st = document.getElementById('saveStatus');
+    const lb = document.getElementById('saveLabel');
+    if (st) st.className = 'save-status saved';
+    if (lb) lb.textContent = 'Saved on-chain';
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // SAVE
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  async function saveNote() {
+    const titleEl = document.getElementById('titleInput');
+    const contentEl = document.getElementById('contentInput');
+    const saveBtn = document.getElementById('saveBtn');
+    if (!titleEl || !contentEl || !saveBtn || !contract) return;
+
+    const title = titleEl.value.trim() || 'Untitled note';
+    const content = contentEl.value;
+
+    setBtnLoading(saveBtn, 'Saving…');
+
+    let pendingToastId;
+
+    try {
+      let tx;
+      if (isNew) {
+        tx = await contract.createNote(title, content);
+      } else {
+        tx = await contract.updateNote(selectedId, title, content);
+      }
+
+      pendingToastId = toast('pending', isNew ? 'Creating note…' : 'Updating note…',
+        `<a href="${BASESCAN_TX}${tx.hash}" target="_blank" rel="noopener">View on Basescan ↗</a>`);
+
+      const receipt = await tx.wait();
+      removeToast(pendingToastId);
+
+      toast('success', isNew ? 'Note created!' : 'Note updated!',
+        `<a href="${BASESCAN_TX}${receipt.hash}" target="_blank" rel="noopener">View on Basescan ↗</a>`);
+
+      markSaved();
+      const wasNew = isNew;
+      isNew = false;
+
+      await loadNotes();
+
+      if (wasNew) {
+        // Select the freshest note (just created)
+        const sorted = bySortOrder(notes);
+        if (sorted.length > 0) {
+          selectedId = sorted[0].id;
+          openNote(selectedId);
+          markSaved();
+        }
+      } else {
+        renderNotesList();
+      }
+
+    } catch (err) {
+      if (pendingToastId) removeToast(pendingToastId);
+      if (err.code === 4001 || err.code === 'ACTION_REJECTED') {
+        toast('warning', 'Cancelled', 'Transaction cancelled.');
+      } else {
+        toast('error', 'Save failed', esc(err.message || 'Transaction failed.'));
+      }
+    } finally {
+      if (saveBtn && saveBtn.isConnected) {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = 'Save';
+      }
+    }
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // DELETE
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  function openDeleteModal() {
+    pendingDeleteId = selectedId;
+    $deleteModal.classList.add('show');
+  }
+
+  function closeDeleteModal() {
+    $deleteModal.classList.remove('show');
+    pendingDeleteId = null;
+  }
+
+  $cancelDel.addEventListener('click', closeDeleteModal);
+  $deleteModal.addEventListener('click', e => { if (e.target === $deleteModal) closeDeleteModal(); });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && $deleteModal.classList.contains('show')) closeDeleteModal();
+  });
+
+  $confirmDel.addEventListener('click', async () => {
+    if (!pendingDeleteId || !contract) return;
+
+    const idToDelete = pendingDeleteId;
+    setBtnLoading($confirmDel, 'Deleting…');
+    closeDeleteModal();
+
+    let pendingToastId;
+
+    try {
+      const tx = await contract.deleteNote(idToDelete);
+      pendingToastId = toast('pending', 'Deleting note…',
+        `<a href="${BASESCAN_TX}${tx.hash}" target="_blank" rel="noopener">View on Basescan ↗</a>`);
+
+      const receipt = await tx.wait();
+      removeToast(pendingToastId);
+
+      toast('success', 'Note deleted',
+        `<a href="${BASESCAN_TX}${receipt.hash}" target="_blank" rel="noopener">View on Basescan ↗</a>`);
+
+      selectedId = null;
+      isNew = false;
+
+      await loadNotes();
+
+      // Show editor empty state
+      const pane = document.getElementById('editorPane');
+      if (pane) {
+        pane.innerHTML = `
+          <div class="editor-empty">
+            <div class="editor-empty-icon">🗑️</div>
+            <h3>Note deleted</h3>
+            <p>Select a note or create a new one.</p>
+          </div>
+        `;
+      }
+
+    } catch (err) {
+      if (pendingToastId) removeToast(pendingToastId);
+      if (err.code === 4001 || err.code === 'ACTION_REJECTED') {
+        toast('warning', 'Cancelled', 'Delete cancelled.');
+      } else {
+        toast('error', 'Delete failed', esc(err.message || 'Transaction failed.'));
+      }
+    } finally {
+      $confirmDel.disabled = false;
+      $confirmDel.textContent = 'Delete note';
+    }
+  });
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // TOASTS
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const EMOJIS = { success: '✅', error: '❌', warning: '⚠️', pending: '⏳', info: 'ℹ️' };
+
+  function toast(type, title, body = '') {
+    const id = `t${Date.now()}${Math.random().toString(36).slice(2)}`;
+    const el = document.createElement('div');
+    el.className = 'toast';
+    el.id = id;
+    el.innerHTML = `
+      <span class="toast-emoji">${EMOJIS[type] || 'ℹ️'}</span>
+      <div class="toast-inner">
+        <div class="toast-title">${esc(title)}</div>
+        ${body ? `<div class="toast-msg">${body}</div>` : ''}
+      </div>
+      <button class="toast-close" onclick="removeToast('${id}')" aria-label="Dismiss">×</button>
+    `;
+    $toastWrap.appendChild(el);
+    if (type !== 'pending') setTimeout(() => removeToast(id), 7000);
+    return id;
+  }
+
+  function removeToast(id) {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // HELPERS
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  function relDate(ts) {
+    if (!ts) return '';
+    const d = new Date(ts * 1000);
+    const now = new Date();
+    const diffSec = Math.floor((now - d) / 1000);
+
+    if (diffSec < 60) return 'Just now';
+    if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+
+    const todayMid = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const dateMid  = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const days = Math.round((todayMid - dateMid) / 86400000);
+
+    if (days === 0) return 'Today';
+    if (days === 1) return 'Yesterday';
+    if (days < 7)  return `${days} days ago`;
+
+    if (d.getFullYear() === now.getFullYear()) return `${MONTHS[d.getMonth()]} ${d.getDate()}`;
+    return `${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+  }
+
+  function fullDate(ts) {
+    if (!ts) return '';
+    const d = new Date(ts * 1000);
+    return `${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+  }
+
+  function esc(str) {
+    return String(str ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function setBtnLoading(btn, label) {
+    if (!btn) return;
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner"></span>${label}`;
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // AUTO-CONNECT
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  (async function autoConnect() {
+    if (!window.ethereum) return;
+    try {
+      const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+      if (accounts.length > 0) connectWallet();
+    } catch {}
+  })();
+  </script>
+</body>
+</html>
