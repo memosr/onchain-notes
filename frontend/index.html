@@ -133,6 +133,27 @@
     }
     .wallet-btn.connected:hover { background: var(--card-bg-hover); transform: none; }
 
+    .disconnect-btn {
+      height: 26px;
+      width: 26px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      font-size: 13px;
+      font-family: inherit;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+      flex-shrink: 0;
+    }
+    .disconnect-btn:hover {
+      background: var(--danger-bg);
+      color: var(--danger);
+      border-color: var(--danger-border);
+    }
+
     .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); flex-shrink: 0; }
 
     /* ── MAIN ── */
@@ -696,6 +717,7 @@
     <div class="topbar-actions">
       <button class="icon-btn" id="themeBtn" title="Toggle theme" aria-label="Toggle theme">🌙</button>
       <button class="wallet-btn" id="walletBtn">Connect Wallet</button>
+      <button class="disconnect-btn" id="disconnectBtn" hidden aria-label="Disconnect wallet" title="Disconnect">✕</button>
     </div>
   </header>
 
@@ -805,6 +827,7 @@
   const $main       = document.getElementById('main');
   const $walletBtn  = document.getElementById('walletBtn');
   const $walletBtnCenter = document.getElementById('walletBtnCenter');
+  const $disconnectBtn = document.getElementById('disconnectBtn');
   const $themeBtn   = document.getElementById('themeBtn');
   const $deleteModal = document.getElementById('deleteModal');
   const $cancelDel  = document.getElementById('cancelDeleteBtn');
@@ -911,6 +934,7 @@
     $walletBtn.className = 'wallet-btn connected';
     $walletBtn.disabled = false;
     $walletBtn.innerHTML = `<span class="dot"></span>${short}`;
+    $disconnectBtn.hidden = false;
   }
 
   function resetWalletBtn() {
@@ -919,10 +943,22 @@
     $walletBtn.textContent = 'Connect Wallet';
     $walletBtnCenter.disabled = false;
     $walletBtnCenter.textContent = 'Connect Wallet';
+    $disconnectBtn.hidden = true;
+  }
+
+  function disconnectWallet() {
+    if (window.ethereum) {
+      window.ethereum.removeListener('accountsChanged', onAccountsChanged);
+    }
+    provider = signer = contract = null;
+    notes = []; selectedId = null; isNew = false; unsaved = false;
+    resetWalletBtn();
+    showNotConnected();
   }
 
   $walletBtn.addEventListener('click', () => { if (!signer) connectWallet(); });
   $walletBtnCenter.addEventListener('click', connectWallet);
+  $disconnectBtn.addEventListener('click', disconnectWallet);
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // APP SHELL
