@@ -299,6 +299,50 @@
       flex-shrink: 0;
     }
 
+    /* ── SEARCH ── */
+    .search-wrap {
+      position: relative;
+      margin-bottom: 8px;
+    }
+
+    .search-input {
+      width: 100%;
+      height: 32px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--text-primary);
+      font-size: 12.5px;
+      font-family: inherit;
+      padding: 0 28px 0 10px;
+      outline: none;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .search-input::placeholder { color: var(--text-secondary); }
+    .search-input:focus {
+      border-color: var(--accent);
+      background: var(--accent-subtle);
+    }
+
+    .search-clear {
+      position: absolute;
+      right: 6px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 12px;
+      line-height: 1;
+      padding: 3px;
+      display: grid;
+      place-items: center;
+      border-radius: 4px;
+      transition: color 0.12s;
+    }
+    .search-clear:hover { color: var(--text-primary); }
+
     /* Empty / loading sidebar states */
     .sidebar-empty {
       padding: 32px 16px;
@@ -820,6 +864,7 @@
   let isNew = false;
   let unsaved = false;
   let pendingDeleteId = null;
+  let searchQuery = '';
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // DOM REFS
@@ -951,7 +996,7 @@
       window.ethereum.removeListener('accountsChanged', onAccountsChanged);
     }
     provider = signer = contract = null;
-    notes = []; selectedId = null; isNew = false; unsaved = false;
+    notes = []; selectedId = null; isNew = false; unsaved = false; searchQuery = '';
     resetWalletBtn();
     showNotConnected();
   }
@@ -983,9 +1028,22 @@
   }
 
   function renderApp() {
+    searchQuery = '';
     $main.innerHTML = `
       <aside class="sidebar">
         <div class="sidebar-head">
+          <div class="search-wrap">
+            <input
+              type="text"
+              class="search-input"
+              id="searchInput"
+              placeholder="Search notes..."
+              autocomplete="off"
+              spellcheck="false"
+              aria-label="Search notes"
+            />
+            <button class="search-clear" id="searchClear" hidden aria-label="Clear search">✕</button>
+          </div>
           <button class="new-btn" id="newNoteBtn">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             New Note
@@ -1008,6 +1066,21 @@
       </div>
     `;
     document.getElementById('newNoteBtn').addEventListener('click', openNewNote);
+
+    const searchInput = document.getElementById('searchInput');
+    const searchClear = document.getElementById('searchClear');
+    searchInput.addEventListener('input', () => {
+      searchQuery = searchInput.value;
+      searchClear.hidden = !searchQuery;
+      renderNotesList();
+    });
+    searchClear.addEventListener('click', () => {
+      searchQuery = '';
+      searchInput.value = '';
+      searchClear.hidden = true;
+      searchInput.focus();
+      renderNotesList();
+    });
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1071,7 +1144,25 @@
       return;
     }
 
-    list.innerHTML = bySortOrder(notes).map(n => `
+    const q = searchQuery.trim().toLowerCase();
+    const filtered = q
+      ? notes.filter(n =>
+          (n.title || '').toLowerCase().includes(q) ||
+          (n.content || '').toLowerCase().includes(q)
+        )
+      : notes;
+
+    if (filtered.length === 0) {
+      list.innerHTML = `
+        <div class="sidebar-empty">
+          <div class="sidebar-empty-icon">🔍</div>
+          No notes found.
+        </div>
+      `;
+      return;
+    }
+
+    list.innerHTML = bySortOrder(filtered).map(n => `
       <div class="note-item ${n.id === selectedId ? 'active' : ''}"
            data-id="${n.id}"
            tabindex="0"
