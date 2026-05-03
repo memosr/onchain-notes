@@ -257,12 +257,25 @@
     .notes-scroll::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 2px; }
 
     .note-item {
+      position: relative;
+      overflow: hidden;
       padding: 9px 11px;
       border-radius: 7px;
       cursor: pointer;
       margin-bottom: 1px;
       border: 1px solid transparent;
       transition: background 0.12s, border-color 0.12s;
+    }
+    .note-item::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 4px;
+      bottom: 4px;
+      width: 3px;
+      border-radius: 0 2px 2px 0;
+      background: var(--note-tag-color, transparent);
+      transition: background 0.15s;
     }
     .note-item:hover { background: var(--card-bg); }
     .note-item.active {
@@ -289,6 +302,40 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
+
+    /* ── TAG PICKER ── */
+    .tag-picker {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: 18px;
+    }
+
+    .tag-opt {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      outline: none;
+      opacity: 0.45;
+      transition: transform 0.12s, opacity 0.12s, box-shadow 0.12s;
+      flex-shrink: 0;
+    }
+    .tag-opt:hover { opacity: 0.8; transform: scale(1.2); }
+    .tag-opt.selected { opacity: 1; box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px rgba(255,255,255,0.55); }
+    [data-theme="light"] .tag-opt.selected { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px rgba(0,0,0,0.4); }
+
+    .tag-none {
+      background: var(--card-bg);
+      border: 1.5px solid var(--border-strong) !important;
+      color: var(--text-secondary);
+      display: grid;
+      place-items: center;
+    }
+    .tag-none.selected { opacity: 1; box-shadow: none; border-color: var(--text-secondary) !important; }
+    .tag-none:hover { opacity: 1; transform: scale(1.15); }
 
     .sidebar-foot {
       padding: 8px 12px;
@@ -822,6 +869,15 @@
   const BASE_CHAIN_ID = 8453n;
   const BASESCAN_TX = 'https://basescan.org/tx/';
 
+  const TAG_COLORS = {
+    red:    '#ef4444',
+    orange: '#f97316',
+    yellow: '#eab308',
+    green:  '#22c55e',
+    blue:   '#3b82f6',
+    purple: '#a855f7',
+  };
+
   const RPC_URLS = [
     'https://base.llamarpc.com',
     'https://base-rpc.publicnode.com',
@@ -871,6 +927,20 @@
   let unsaved = false;
   let pendingDeleteId = null;
   let searchQuery = '';
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // TAG STORAGE
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  function getNoteTag(noteId) {
+    return localStorage.getItem(`tag:${noteId}`) || null;
+  }
+  function setNoteTag(noteId, colorName) {
+    if (colorName) localStorage.setItem(`tag:${noteId}`, colorName);
+    else localStorage.removeItem(`tag:${noteId}`);
+  }
+  function removeNoteTag(noteId) {
+    localStorage.removeItem(`tag:${noteId}`);
+  }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // DOM REFS
@@ -1168,18 +1238,23 @@
       return;
     }
 
-    list.innerHTML = bySortOrder(filtered).map(n => `
-      <div class="note-item ${n.id === selectedId ? 'active' : ''}"
-           data-id="${n.id}"
-           tabindex="0"
-           role="button"
-           aria-label="${esc(n.title || 'Untitled note')}"
-           onclick="openNote(${n.id}n)"
-           onkeydown="if(event.key==='Enter'||event.key===' ')openNote(${n.id}n)">
-        <div class="ni-title">${esc(n.title || 'Untitled note')}</div>
-        <div class="ni-meta">${relDate(Number(n.updatedAt))}</div>
-      </div>
-    `).join('');
+    list.innerHTML = bySortOrder(filtered).map(n => {
+      const tag = getNoteTag(n.id);
+      const tagStyle = (tag && TAG_COLORS[tag]) ? `style="--note-tag-color:${TAG_COLORS[tag]}"` : '';
+      return `
+        <div class="note-item ${n.id === selectedId ? 'active' : ''}"
+             data-id="${n.id}"
+             tabindex="0"
+             role="button"
+             aria-label="${esc(n.title || 'Untitled note')}"
+             ${tagStyle}
+             onclick="openNote(${n.id}n)"
+             onkeydown="if(event.key==='Enter'||event.key===' ')openNote(${n.id}n)">
+          <div class="ni-title">${esc(n.title || 'Untitled note')}</div>
+          <div class="ni-meta">${relDate(Number(n.updatedAt))}</div>
+        </div>
+      `;
+    }).join('');
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1211,6 +1286,24 @@
     const content = note ? note.content : '';
     const idLabel = note ? `#${note.id}` : 'New';
     const isNewNote = note === null;
+    const currentTag = note ? getNoteTag(note.id) : null;
+
+    const tagPickerHtml = !isNewNote ? `
+      <div class="tag-picker" id="tagPicker">
+        <button class="tag-opt tag-none ${!currentTag ? 'selected' : ''}" data-color="" title="No color" aria-label="No color">
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+        ${Object.entries(TAG_COLORS).map(([name, hex]) =>
+          `<button class="tag-opt tag-circle ${currentTag === name ? 'selected' : ''}"
+                   data-color="${name}"
+                   style="background:${hex}"
+                   title="${name.charAt(0).toUpperCase() + name.slice(1)}"
+                   aria-label="${name}"></button>`
+        ).join('')}
+      </div>
+    ` : '';
 
     pane.innerHTML = `
       <div class="editor-body" id="editorBody">
@@ -1227,6 +1320,7 @@
           autocomplete="off"
           spellcheck="true"
         />
+        ${tagPickerHtml}
         <textarea
           class="content-textarea"
           id="contentInput"
@@ -1266,6 +1360,19 @@
     }
 
     document.getElementById('saveBtn').addEventListener('click', saveNote);
+
+    if (!isNewNote) {
+      document.querySelectorAll('#tagPicker .tag-opt').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const colorName = btn.dataset.color;
+          setNoteTag(note.id, colorName);
+          document.querySelectorAll('#tagPicker .tag-opt').forEach(b => {
+            b.classList.toggle('selected', b.dataset.color === colorName);
+          });
+          renderNotesList();
+        });
+      });
+    }
 
     // Ctrl+S / Cmd+S shortcut
     pane.addEventListener('keydown', e => {
@@ -1431,6 +1538,7 @@
       toast('success', 'Note deleted',
         `<a href="${BASESCAN_TX}${receipt.hash}" target="_blank" rel="noopener">View on Basescan ↗</a>`);
 
+      removeNoteTag(idToDelete);
       selectedId = null;
       isNew = false;
 
