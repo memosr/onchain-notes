@@ -535,6 +535,14 @@
       gap: 6px;
     }
 
+    .word-count {
+      font-size: 11px;
+      font-family: var(--mono);
+      color: var(--text-secondary);
+      opacity: 0.6;
+      white-space: nowrap;
+    }
+
     .status-dot {
       width: 6px;
       height: 6px;
@@ -1454,6 +1462,7 @@
           <span class="status-dot"></span>
           <span id="saveLabel">All saved</span>
         </div>
+        <span class="word-count" id="wordCount"></span>
         <div class="editor-actions">
           <button class="btn btn-ghost" id="copyBtn" title="Copy note content" aria-label="Copy note content">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1472,7 +1481,8 @@
     const contentEl = document.getElementById('contentInput');
 
     titleEl.addEventListener('input', markUnsaved);
-    contentEl.addEventListener('input', markUnsaved);
+    contentEl.addEventListener('input', () => { markUnsaved(); updateWordCount(); });
+    updateWordCount();
 
     document.getElementById('copyBtn').addEventListener('click', copyNoteContent);
 
@@ -1527,6 +1537,15 @@
     } catch {
       toast('error', 'Copy failed', 'Could not access clipboard.');
     }
+  }
+
+  function updateWordCount() {
+    const el = document.getElementById('wordCount');
+    if (!el) return;
+    const content = document.getElementById('contentInput')?.value || '';
+    const chars = content.length;
+    const words = content.split(/\s+/).filter(Boolean).length;
+    el.textContent = `${words} words · ${chars} chars`;
   }
 
   function markUnsaved() {
