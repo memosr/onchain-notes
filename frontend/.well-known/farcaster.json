@@ -1,0 +1,24 @@
+{
+  "accountAssociation": {
+    "header": "",
+    "payload": "",
+    "signature": ""
+  },
+  "miniapp": {
+    "version": "1",
+    "name": "Onchain Notes",
+    "iconUrl": "https://onchain-notes.vercel.app/icon.png",
+    "homeUrl": "https://onchain-notes.vercel.app/",
+    "splashImageUrl": "https://onchain-notes.vercel.app/splash.png",
+    "splashBackgroundColor": "#0e0e10",
+    "subtitle": "Notes you actually own",
+    "description": "A personal note-taking dApp on Base. Each user owns and controls their own notes — stored permanently on-chain.",
+    "primaryCategory": "productivity",
+    "tags": ["notes", "productivity", "base", "onchain"],
+    "heroImageUrl": "https://onchain-notes.vercel.app/hero.png",
+    "tagline": "Own your notes onchain",
+    "ogTitle": "Onchain Notes",
+    "ogDescription": "Personal notes you actually own",
+    "ogImageUrl": "https://onchain-notes.vercel.app/og.png"
+  }
+}
