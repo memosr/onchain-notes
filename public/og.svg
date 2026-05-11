@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0e0e10;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0c0c18;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="titleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#e8e8ed;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#a5b4fc;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="borderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:0.6" />
+      <stop offset="50%" style="stop-color:#818cf8;stop-opacity:0.3" />
+      <stop offset="100%" style="stop-color:#6366f1;stop-opacity:0.1" />
+    </linearGradient>
+    <linearGradient id="baseBadgeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e40af;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1d4ed8;stop-opacity:1" />
+    </linearGradient>
+    <filter id="glowText">
+      <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="cardShadow">
+      <feDropShadow dx="0" dy="0" stdDeviation="30" flood-color="#6366f1" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bgGrad)"/>
+
+  <!-- Subtle noise texture overlay via dots -->
+  <pattern id="dots" x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse">
+    <circle cx="30" cy="30" r="1" fill="#818cf8" opacity="0.03"/>
+  </pattern>
+  <rect width="1200" height="630" fill="url(#dots)"/>
+
+  <!-- Outer border -->
+  <rect x="2" y="2" width="1196" height="626" rx="0" fill="none" stroke="url(#borderGrad)" stroke-width="2"/>
+
+  <!-- Center glow -->
+  <ellipse cx="600" cy="315" rx="500" ry="280" fill="#6366f1" opacity="0.03"/>
+
+  <!-- Left accent bar -->
+  <rect x="0" y="0" width="5" height="630" fill="url(#accentGrad)"/>
+
+  <!-- App icon (mini document) -->
+  <g filter="url(#cardShadow)">
+    <rect x="80" y="200" width="90" height="110" rx="10" fill="#1a1a22" stroke="#6366f1" stroke-width="1.5"/>
+    <!-- Corner fold -->
+    <path d="M148 200 L170 222 L148 222 Z" fill="#0e0e14" stroke="#6366f1" stroke-width="1"/>
+    <polygon points="148,200 170,222 148,222" fill="#12121a"/>
+    <path d="M148 200 L170 222 L148 222 Z" fill="#1e1e2a" stroke="#6366f1" stroke-width="1"/>
+    <!-- Lines in icon -->
+    <rect x="94" y="236" width="44" height="6" rx="3" fill="url(#accentGrad)" opacity="0.9"/>
+    <rect x="94" y="250" width="62" height="5" rx="2.5" fill="#818cf8" opacity="0.5"/>
+    <rect x="94" y="263" width="56" height="5" rx="2.5" fill="#818cf8" opacity="0.4"/>
+    <rect x="94" y="276" width="58" height="5" rx="2.5" fill="#818cf8" opacity="0.35"/>
+  </g>
+
+  <!-- Main title -->
+  <text x="200" y="270" font-family="system-ui, -apple-system, sans-serif" font-size="76" font-weight="800" fill="url(#titleGrad)" letter-spacing="-2">Onchain Notes</text>
+
+  <!-- Divider -->
+  <rect x="200" y="292" width="800" height="2" rx="1" fill="url(#accentGrad)" opacity="0.3"/>
+
+  <!-- Description -->
+  <text x="200" y="350" font-family="system-ui, -apple-system, sans-serif" font-size="28" font-weight="400" fill="#9394a5">Personal notes you actually own</text>
+  <text x="200" y="392" font-family="system-ui, -apple-system, sans-serif" font-size="28" font-weight="600" fill="#818cf8">— on Base mainnet.</text>
+
+  <!-- Feature pills -->
+  <g transform="translate(200, 432)">
+    <!-- Pill 1 -->
+    <rect x="0" y="0" width="150" height="38" rx="19" fill="#6366f1" opacity="0.12" stroke="#6366f1" stroke-width="1"/>
+    <text x="75" y="24" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="600" text-anchor="middle" fill="#818cf8">Farcaster Mini App</text>
+
+    <!-- Pill 2 -->
+    <rect x="166" y="0" width="160" height="38" rx="19" fill="#6366f1" opacity="0.12" stroke="#6366f1" stroke-width="1"/>
+    <text x="246" y="24" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="600" text-anchor="middle" fill="#818cf8">Onchain Storage</text>
+
+    <!-- Pill 3 -->
+    <rect x="342" y="0" width="140" height="38" rx="19" fill="#6366f1" opacity="0.12" stroke="#6366f1" stroke-width="1"/>
+    <text x="412" y="24" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="600" text-anchor="middle" fill="#818cf8">You Own Your Data</text>
+  </g>
+
+  <!-- Built on Base badge (bottom right) -->
+  <g transform="translate(978, 490)">
+    <rect x="0" y="0" width="182" height="60" rx="12" fill="url(#baseBadgeGrad)" opacity="0.9"/>
+    <rect x="0" y="0" width="182" height="60" rx="12" fill="none" stroke="#3b82f6" stroke-width="1.5"/>
+
+    <!-- Base blue circle -->
+    <circle cx="30" cy="30" r="14" fill="#2563eb"/>
+    <circle cx="30" cy="30" r="8" fill="white" opacity="0.9"/>
+
+    <text x="52" y="25" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="500" fill="#93c5fd">BUILT ON</text>
+    <text x="52" y="44" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="800" fill="white" letter-spacing="-0.5">Base</text>
+  </g>
+
+  <!-- URL / domain -->
+  <text x="200" y="588" font-family="system-ui, -apple-system, sans-serif" font-size="15" fill="#444456" letter-spacing="1">onchain-notes.vercel.app</text>
+</svg>
