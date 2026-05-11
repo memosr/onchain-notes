@@ -794,6 +794,75 @@
       transition-property: background-color, border-color, color;
       transition-duration: 0.15s;
     }
+
+    /* ── KEYBOARD SHORTCUTS ── */
+    kbd {
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 3px 7px;
+      border-radius: 5px;
+      border: 1px solid var(--border-strong);
+      background: var(--card-bg);
+      color: var(--text-secondary);
+      box-shadow: 0 1px 0 var(--border-strong);
+      display: inline-block;
+      line-height: 1.4;
+    }
+
+    .shortcuts-list {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 22px;
+    }
+
+    .shortcut-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 11px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .shortcut-row:last-child { border-bottom: none; }
+
+    .shortcut-desc { font-size: 14px; }
+
+    .shortcut-keys {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .key-sep {
+      color: var(--text-secondary);
+      font-size: 12px;
+      margin: 0 1px;
+    }
+
+    /* ── HELP FAB ── */
+    .help-fab {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 1px solid var(--border-strong);
+      background: var(--modal-bg);
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      font-size: 14px;
+      font-weight: 700;
+      font-family: inherit;
+      z-index: 400;
+      transition: background 0.15s, color 0.15s;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      line-height: 1;
+    }
+    .help-fab:hover { background: var(--card-bg-hover); color: var(--text-primary); }
   </style>
 </head>
 <body>
@@ -847,6 +916,17 @@
     </a>
   </footer>
 
+  <!-- ── SHORTCUTS MODAL ── -->
+  <div class="modal-backdrop" id="shortcutsModal">
+    <div class="modal">
+      <h3>Keyboard Shortcuts</h3>
+      <div class="shortcuts-list" id="shortcutsList"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="closeShortcutsBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ── DELETE MODAL ── -->
   <div class="modal-backdrop" id="deleteModal">
     <div class="modal">
@@ -861,6 +941,9 @@
 
   <!-- ── TOASTS ── -->
   <div class="toast-wrap" id="toastWrap"></div>
+
+  <!-- ── HELP FAB ── -->
+  <button class="help-fab" id="helpFab" aria-label="Keyboard shortcuts">?</button>
 
   <script>
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -946,6 +1029,9 @@
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // DOM REFS
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const isMac = /Mac|iPhone|iPod|iPad/.test(navigator.platform);
+  const modKey = isMac ? '⌘' : 'Ctrl';
+
   const $main       = document.getElementById('main');
   const $walletBtn  = document.getElementById('walletBtn');
   const $walletBtnCenter = document.getElementById('walletBtnCenter');
@@ -955,6 +1041,9 @@
   const $cancelDel  = document.getElementById('cancelDeleteBtn');
   const $confirmDel = document.getElementById('confirmDeleteBtn');
   const $toastWrap  = document.getElementById('toastWrap');
+  const $shortcutsModal = document.getElementById('shortcutsModal');
+  const $closeShortcutsBtn = document.getElementById('closeShortcutsBtn');
+  const $helpFab = document.getElementById('helpFab');
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // THEME
@@ -1083,6 +1172,36 @@
   $disconnectBtn.addEventListener('click', disconnectWallet);
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // KEYBOARD SHORTCUTS MODAL
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  function openShortcutsModal() {
+    const plus = `<span class="key-sep">+</span>`;
+    const mod = `<kbd>${modKey}</kbd>`;
+    const shortcuts = [
+      { desc: 'New note',            keys: [mod, '<kbd>N</kbd>'] },
+      { desc: 'Save note',           keys: [mod, '<kbd>S</kbd>'] },
+      { desc: 'Focus search',        keys: [mod, '<kbd>K</kbd>'] },
+      { desc: 'Keyboard shortcuts',  keys: [mod, '<kbd>/</kbd>'] },
+    ];
+    document.getElementById('shortcutsList').innerHTML = shortcuts.map(s =>
+      `<div class="shortcut-row">
+        <span class="shortcut-desc">${s.desc}</span>
+        <span class="shortcut-keys">${s.keys.join(plus)}</span>
+      </div>`
+    ).join('');
+    $shortcutsModal.classList.add('show');
+  }
+
+  function closeShortcutsModal() {
+    $shortcutsModal.classList.remove('show');
+  }
+
+  $closeShortcutsBtn.addEventListener('click', closeShortcutsModal);
+  $shortcutsModal.addEventListener('click', e => { if (e.target === $shortcutsModal) closeShortcutsModal(); });
+  $helpFab.title = `Keyboard shortcuts (${modKey}+/)`;
+  $helpFab.addEventListener('click', openShortcutsModal);
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // APP SHELL
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   function showNotConnected() {
@@ -1118,10 +1237,11 @@
               autocomplete="off"
               spellcheck="false"
               aria-label="Search notes"
+              title="Focus search (${modKey}K)"
             />
             <button class="search-clear" id="searchClear" hidden aria-label="Clear search">✕</button>
           </div>
-          <button class="new-btn" id="newNoteBtn">
+          <button class="new-btn" id="newNoteBtn" title="New Note (${modKey}N)">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             New Note
           </button>
@@ -1343,7 +1463,7 @@
             Copy
           </button>
           ${note ? `<button class="btn btn-danger" id="deleteBtn">Delete</button>` : ''}
-          <button class="btn btn-primary" id="saveBtn">Save</button>
+          <button class="btn btn-primary" id="saveBtn" title="Save (${modKey}S)">Save</button>
         </div>
       </div>
     `;
@@ -1374,14 +1494,6 @@
         });
       });
     }
-
-    // Ctrl+S / Cmd+S shortcut
-    pane.addEventListener('keydown', e => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
-        e.preventDefault();
-        saveNote();
-      }
-    });
 
     titleEl.focus();
   }
@@ -1516,7 +1628,35 @@
   $deleteModal.addEventListener('click', e => { if (e.target === $deleteModal) closeDeleteModal(); });
 
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && $deleteModal.classList.contains('show')) closeDeleteModal();
+    if (e.key === 'Escape') {
+      if ($deleteModal.classList.contains('show')) closeDeleteModal();
+      if ($shortcutsModal.classList.contains('show')) closeShortcutsModal();
+      return;
+    }
+
+    if (!signer) return;
+
+    const mod = isMac ? e.metaKey : e.ctrlKey;
+    if (!mod) return;
+
+    switch (e.key.toLowerCase()) {
+      case 'n':
+        e.preventDefault();
+        if (document.getElementById('newNoteBtn')) openNewNote();
+        break;
+      case 's':
+        e.preventDefault();
+        saveNote();
+        break;
+      case 'k':
+        e.preventDefault();
+        { const si = document.getElementById('searchInput'); if (si) { si.focus(); si.select(); } }
+        break;
+      case '/':
+        e.preventDefault();
+        openShortcutsModal();
+        break;
+    }
   });
 
   $confirmDel.addEventListener('click', async () => {
